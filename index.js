@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 const puppeteer  = require('puppeteer');
 const express    = require('express');
 const bodyParser = require('body-parser');
