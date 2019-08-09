@@ -12,7 +12,8 @@ app.use(bodyParser.json());
 const router = express.Router();
 router.post('/screenshot', function(req, res) {
     (async () => {
-        puppeteer.launch()
+        puppeteer
+            .launch()
             .then(async browser => {
                 console.log('Generating screenshot');
 
@@ -32,11 +33,8 @@ router.post('/screenshot', function(req, res) {
                 });
                 await browser.close();
 
-                fs.readFile(tmpFile, null, function(err, data) {
+                res.sendFile(tmpFile, {}, function() {
                     tmpobj.removeCallback();
-
-                    res.set('Content-Type', 'image/png');
-                    res.send(data);
                 });
             })
             .catch((err) => {
@@ -48,7 +46,8 @@ router.post('/screenshot', function(req, res) {
 
 router.post('/pdf', function(req, res) {
     (async () => {
-        puppeteer.launch()
+        puppeteer
+            .launch()
             .then(async browser => {
                 console.log('Generating PDF');
 
@@ -68,11 +67,8 @@ router.post('/pdf', function(req, res) {
                 });
                 await browser.close();
 
-                fs.readFile(tmpFile, null, function(err, data) {
+                res.sendFile(tmpFile, {}, function() {
                     tmpobj.removeCallback();
-
-                    res.set('Content-Type', 'application/pdf');
-                    res.send(data);
                 });
             })
             .catch((err) => {
