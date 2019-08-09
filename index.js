@@ -6,8 +6,8 @@ const tmp        = require('tmp');
 const fs         = require('fs');
 
 const app = express();
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
 
 const router = express.Router();
 router.post('/screenshot', function(req, res) {
@@ -27,10 +27,23 @@ router.post('/screenshot', function(req, res) {
                     await page.goto(req.body.url);
                 }
 
-                const element = await page.$(req.body.selector);
-                await element.screenshot({
-                    path: tmpFile
+                await page.setViewport({
+                    width:  req.body.options.width || 1500,
+                    height: req.body.options.height || 1000
                 });
+
+                if (req.body.options.selector) {
+                    const element = await page.$(req.body.options.selector);
+                    await element.screenshot({
+                        path: tmpFile,
+                        fullPage: true
+                    });
+                } else {
+                    await page.screenshot({
+                        path: tmpFile,
+                        fullPage: true
+                    });
+                }
                 await browser.close();
 
                 res.sendFile(tmpFile, {}, function() {
@@ -60,9 +73,15 @@ router.post('/pdf', function(req, res) {
                 } else {
                     await page.goto(req.body.url);
                 }
+
+                await page.setViewport({
+                    width:  req.body.options.width || 1500,
+                    height: req.body.options.height || 1000
+                });
+
                 await page.pdf({
                     path:   tmpFile,
-                    format: req.body.format,
+                    format: req.body.options.format || 'Letter',
                     printBackground: true
                 });
                 await browser.close();
