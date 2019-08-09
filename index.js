@@ -22,9 +22,15 @@ router.post('/screenshot', function(req, res) {
 
                 const page = await browser.newPage();
                 if (req.body.html) {
-                    await page.setContent(req.body.html);
+                    await page.setContent(req.body.html, {
+                        networkIdleTimeout: 5000,
+                        waitUntil: 'networkidle0',
+                    });
                 } else {
-                    await page.goto(req.body.url);
+                    await page.goto(req.body.url, {
+                        networkIdleTimeout: 5000,
+                        waitUntil: 'networkidle0',
+                    });
                 }
 
                 await page.setViewport({
@@ -62,7 +68,7 @@ router.post('/pdf', function(req, res) {
         puppeteer
             .launch()
             .then(async browser => {
-                console.log('Generating PDF');
+                console.log('Generating PDF', req.body.options);
 
                 const tmpobj  = tmp.dirSync();
                 const tmpFile = tmpobj.name + '/page.pdf';
