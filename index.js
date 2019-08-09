@@ -47,7 +47,8 @@ router.post('/screenshot', function(req, res) {
                 } else {
                     await page.screenshot({
                         path: tmpFile,
-                        fullPage: true
+                        fullPage: true,
+                        printBackground: true
                     });
                 }
                 await browser.close();
