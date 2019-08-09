@@ -47,7 +47,8 @@ router.post('/pdf', function(req, res) {
             await page.goto(req.body.url);
             await page.pdf({
                 path:   tmpFile,
-                format: req.body.format
+                format: req.body.format,
+                printBackground: true
             });
             await browser.close();
 
