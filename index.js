@@ -3,7 +3,11 @@ const puppeteer  = require('puppeteer');
 const express    = require('express');
 const bodyParser = require('body-parser');
 const tmp        = require('tmp');
-const fs         = require('fs');
+
+const launcherSettings = {
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+};
 
 const app = express();
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
@@ -13,7 +17,7 @@ const router = express.Router();
 router.post('/screenshot', function(req, res) {
     (async () => {
         puppeteer
-            .launch()
+            .launch(launcherSettings)
             .then(async browser => {
                 console.log('Generating screenshot');
 
@@ -23,13 +27,11 @@ router.post('/screenshot', function(req, res) {
                 const page = await browser.newPage();
                 if (req.body.html) {
                     await page.setContent(req.body.html, {
-                        networkIdleTimeout: 5000,
-                        waitUntil: 'networkidle0',
+                       waitUntil: 'networkidle2',
                     });
                 } else {
                     await page.goto(req.body.url, {
-                        networkIdleTimeout: 5000,
-                        waitUntil: 'networkidle0',
+                        waitUntil: 'networkidle2',
                     });
                 }
 
@@ -67,7 +69,7 @@ router.post('/screenshot', function(req, res) {
 router.post('/pdf', function(req, res) {
     (async () => {
         puppeteer
-            .launch()
+            .launch(launcherSettings)
             .then(async browser => {
                 console.log('Generating PDF', req.body.options);
 
@@ -96,6 +98,38 @@ router.post('/pdf', function(req, res) {
                 res.sendFile(tmpFile, {}, function() {
                     tmpobj.removeCallback();
                 });
+            })
+            .catch((err) => {
+                res.status(500);
+                res.send(err.message);
+            })
+    })();
+});
+
+router.post('/html', function(req, res) {
+    (async () => {
+        puppeteer
+            .launch(launcherSettings)
+            .then(async browser => {
+                console.log('Generating html');
+
+                const page = await browser.newPage();
+                if (req.body.html) {
+                    await page.setContent(req.body.html, {
+                        waitUntil: 'networkidle2',
+                    });
+                } else {
+                    await page.goto(req.body.url, {
+                        waitUntil: 'networkidle2',
+                    });
+                }
+
+                setTimeout(async () => {
+                    let bodyHTML = await page.content();
+                    await browser.close();
+
+                    res.send(bodyHTML);
+                }, req.body.options.wait || 1000);
             })
             .catch((err) => {
                 res.status(500);
