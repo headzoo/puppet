@@ -37,20 +37,24 @@ router.post('/screenshot', function(req, res) {
 
                 await page.setViewport({
                     width:  req.body.options.width || 1500,
-                    height: req.body.options.height || 1000
+                    height: req.body.options.height || 1500
                 });
 
                 if (req.body.options.selector) {
                     const element = await page.$(req.body.options.selector);
                     await element.screenshot({
-                        path: tmpFile,
-                        fullPage: true
+                        path: tmpFile
                     });
                 } else {
                     await page.screenshot({
                         path: tmpFile,
-                        fullPage: true,
-                        printBackground: true
+                        printBackground: true,
+                        clip: {
+                            x: 0,
+                            y: 0,
+                            width: req.body.options.width || 1500,
+                            height: req.body.options.height || 1500
+                        }
                     });
                 }
                 await browser.close();
