@@ -3,6 +3,7 @@ const puppeteer  = require('puppeteer');
 const express    = require('express');
 const bodyParser = require('body-parser');
 const tmp        = require('tmp');
+const fs         = require('fs');
 
 const launcherSettings = {
     headless: true,
@@ -19,49 +20,80 @@ router.post('/screenshot', function(req, res) {
         puppeteer
             .launch(launcherSettings)
             .then(async browser => {
-                console.log('Generating screenshot');
+                const { body } = req;
+                const { options } = body;
 
-                const tmpobj  = tmp.dirSync();
-                const tmpFile = tmpobj.name + '/screenshot.png';
+                console.log('Generating screenshot', options);
 
                 const page = await browser.newPage();
-                if (req.body.html) {
-                    await page.setContent(req.body.html, {
+                if (body.html) {
+                    await page.setContent(body.html, {
                        waitUntil: 'networkidle2',
                     });
                 } else {
-                    await page.goto(req.body.url, {
+                    await page.goto(body.url, {
                         waitUntil: 'networkidle2',
                     });
                 }
 
+                await page.setDefaultNavigationTimeout(0);
                 await page.setViewport({
-                    width:  req.body.options.width || 1500,
-                    height: req.body.options.height || 1500
+                    width:  options.width || 1500,
+                    height: options.height || 1500
                 });
 
-                if (req.body.options.selector) {
-                    const element = await page.$(req.body.options.selector);
-                    await element.screenshot({
-                        path: tmpFile
+                if (options.selectors) {
+                    const images   = {};
+                    const promises = [];
+                    options.selectors.forEach(async (selector) => {
+                        promises.push(new Promise(async (resolve) => {
+                            const tmpobj  = tmp.dirSync();
+                            const tmpFile = tmpobj.name + '/screenshot.png';
+                            const element = await page.$(selector);
+                            await element.screenshot({
+                                path: tmpFile
+                            });
+
+                            const data = fs.readFileSync(tmpFile).toString('base64');
+                            await tmpobj.removeCallback();
+
+                            images[selector] = data;
+                            resolve();
+                        }));
                     });
+
+                    Promise.all(promises)
+                        .then(async () => {
+                            await browser.close();
+                            res.json(images);
+                        });
                 } else {
-                    await page.screenshot({
-                        path: tmpFile,
-                        printBackground: true,
-                        clip: {
-                            x: 0,
-                            y: 0,
-                            width: req.body.options.width || 1500,
-                            height: req.body.options.height || 1500
-                        }
+                    const tmpobj  = tmp.dirSync();
+                    const tmpFile = tmpobj.name + '/screenshot.png';
+
+                    if (options.selector) {
+                        const element = await page.$(options.selector);
+                        await element.screenshot({
+                            path: tmpFile
+                        });
+                    } else {
+                        await page.screenshot({
+                            path: tmpFile,
+                            printBackground: true,
+                            clip: {
+                                x:      0,
+                                y:      0,
+                                width:  options.width || 1500,
+                                height: options.height || 1500
+                            }
+                        });
+                    }
+                    await browser.close();
+
+                    res.sendFile(tmpFile, {}, function() {
+                        tmpobj.removeCallback();
                     });
                 }
-                await browser.close();
-
-                res.sendFile(tmpFile, {}, function() {
-                    tmpobj.removeCallback();
-                });
             })
             .catch((err) => {
                 res.status(500);
