@@ -47,15 +47,17 @@ router.post('/screenshot', function(req, res) {
                     const promises = [];
                     options.selectors.forEach(async (selector) => {
                         promises.push(new Promise(async (resolve) => {
-                            const tmpobj  = tmp.dirSync();
-                            const tmpFile = tmpobj.name + '/screenshot.png';
+                            let data = null;
                             const element = await page.$(selector);
-                            await element.screenshot({
-                                path: tmpFile
-                            });
-
-                            const data = fs.readFileSync(tmpFile).toString('base64');
-                            await tmpobj.removeCallback();
+                            if (element) {
+                                const tmpobj  = tmp.dirSync();
+                                const tmpFile = tmpobj.name + '/screenshot.png';
+                                await element.screenshot({
+                                    path: tmpFile
+                                });
+                                data = fs.readFileSync(tmpFile).toString('base64');
+                                await tmpobj.removeCallback();
+                            }
 
                             images[selector] = data;
                             resolve();
