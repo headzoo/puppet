@@ -176,6 +176,37 @@ router.post('/html', function(req, res) {
     })();
 });
 
+router.post('/ping', function(req, res) {
+    (async () => {
+        puppeteer
+            .launch(launcherSettings)
+            .then(async browser => {
+                console.log('Pinging');
+
+                const start = (new Date().getTime()) / 1000;
+                const page = await browser.newPage();
+                if (req.body.html) {
+                    await page.setContent(req.body.html, {
+                        waitUntil: 'networkidle0',
+                    });
+                } else {
+                    await page.goto(req.body.url, {
+                        waitUntil: 'networkidle0',
+                    });
+                }
+
+                const end = (new Date().getTime()) / 1000;
+
+                await browser.close();
+                res.send((end - start).toString());
+            })
+            .catch((err) => {
+                res.status(500);
+                res.send(err.message);
+            })
+    })();
+});
+
 app.use('/', router);
 
 const port   = process.env.PORT || 8080;
