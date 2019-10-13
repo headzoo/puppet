@@ -7,6 +7,7 @@ const fs         = require('fs');
 
 const launcherSettings = {
     headless: true,
+    ignoreHTTPSErrors: true,
     args: ["--no-sandbox", "--disable-setuid-sandbox"]
 };
 
@@ -195,10 +196,11 @@ router.post('/ping', function(req, res) {
                     });
                 }
 
-                const end = (new Date().getTime()) / 1000;
+                const end   = ((new Date().getTime() - 500) / 1000); // networkidle0 adds 500 ms
+                const total = (end - start);
 
                 await browser.close();
-                res.send((end - start).toString());
+                res.send(total.toString());
             })
             .catch((err) => {
                 res.status(500);
