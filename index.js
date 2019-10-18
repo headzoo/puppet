@@ -38,10 +38,12 @@ router.post('/screenshot', function(req, res) {
                 }
 
                 await page.setDefaultNavigationTimeout(0);
-                await page.setViewport({
-                    width:  options.width || 1500,
-                    height: options.height || 1500
-                });
+                if (!options.fullPage) {
+                    await page.setViewport({
+                        width:  options.width || 1500,
+                        height: options.height || 1500
+                    });
+                }
 
                 if (options.selectors) {
                     const images   = {};
@@ -80,16 +82,21 @@ router.post('/screenshot', function(req, res) {
                             path: tmpFile
                         });
                     } else {
-                        await page.screenshot({
+                        const opts = {
                             path: tmpFile,
-                            printBackground: true,
-                            clip: {
+                            printBackground: true
+                        };
+                        if (options.fullPage) {
+                            opts.fullPage = true;
+                        } else {
+                            opts.clip = {
                                 x:      0,
                                 y:      0,
                                 width:  options.width || 1500,
                                 height: options.height || 1500
                             }
-                        });
+                        }
+                        await page.screenshot(opts);
                     }
                     await browser.close();
 
