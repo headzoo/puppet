@@ -84,6 +84,8 @@ router.post('/screenshot', function(req, res) {
                     } else {
                         const opts = {
                             path: tmpFile,
+                            type: 'jpeg',
+                            quality: 60,
                             printBackground: true
                         };
                         if (options.fullPage) {
@@ -208,6 +210,68 @@ router.post('/ping', function(req, res) {
 
                 await browser.close();
                 res.send(total.toString());
+            })
+            .catch((err) => {
+                res.status(500);
+                res.send(err.message);
+            })
+    })();
+});
+
+router.post('/heatmap', function(req, res) {
+    (async () => {
+        puppeteer
+            .launch(launcherSettings)
+            .then(async browser => {
+                console.log('Generating heatmap');
+                const { body } = req;
+                const { points } = body;
+                const { options } = body;
+
+                console.log(points);
+
+                const page = await browser.newPage();
+                if (req.body.html) {
+                    await page.setContent(req.body.html, {
+                        waitUntil: 'networkidle0',
+                    });
+                } else {
+                    await page.goto(req.body.url, {
+                        waitUntil: 'networkidle0',
+                    });
+                }
+
+                await page.addScriptTag({
+                    url: 'http://dev.arb.com/js/simpleheat.js'
+                });
+                await page.addScriptTag({
+                    url: 'http://dev.arb.com/js/heatmap.js'
+                });
+
+                const tmpobj  = tmp.dirSync();
+                const tmpFile = tmpobj.name + '/screenshot.png';
+
+                const opts = {
+                    path: tmpFile,
+                    printBackground: true
+                };
+                if (options.fullPage) {
+                    opts.fullPage = true;
+                } else {
+                    opts.clip = {
+                        x:      0,
+                        y:      0,
+                        width:  options.width || 1500,
+                        height: options.height || 1500
+                    }
+                }
+
+                await page.screenshot(opts);
+                await browser.close();
+
+                res.sendFile(tmpFile, {}, function() {
+                    tmpobj.removeCallback();
+                });
             })
             .catch((err) => {
                 res.status(500);
