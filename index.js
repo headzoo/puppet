@@ -50,20 +50,25 @@ router.post('/screenshot', function(req, res) {
                     const promises = [];
                     options.selectors.forEach(async (selector) => {
                         promises.push(new Promise(async (resolve) => {
-                            let data = null;
-                            const element = await page.$(selector);
-                            if (element) {
-                                const tmpobj  = tmp.dirSync();
-                                const tmpFile = tmpobj.name + '/screenshot.png';
-                                await element.screenshot({
-                                    path: tmpFile
-                                });
-                                data = fs.readFileSync(tmpFile).toString('base64');
-                                await tmpobj.removeCallback();
-                            }
+                            try {
+                                let data      = null;
+                                const element = await page.$(selector);
+                                if (element) {
+                                    const tmpobj  = tmp.dirSync();
+                                    const tmpFile = tmpobj.name + '/screenshot.png';
+                                    await element.screenshot({
+                                        path: tmpFile
+                                    });
+                                    data = fs.readFileSync(tmpFile).toString('base64');
+                                    await tmpobj.removeCallback();
+                                }
 
-                            images[selector] = data;
-                            resolve();
+                                images[selector] = data;
+                                resolve();
+                            } catch (error) {
+                                console.error(error);
+                                resolve();
+                            }
                         }));
                     });
 
@@ -71,6 +76,9 @@ router.post('/screenshot', function(req, res) {
                         .then(async () => {
                             await browser.close();
                             res.json(images);
+                        })
+                        .catch((error) => {
+                            console.log(error);
                         });
                 } else {
                     const tmpobj  = tmp.dirSync();
