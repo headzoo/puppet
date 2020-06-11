@@ -6,7 +6,7 @@ const tmp        = require('tmp');
 const fs         = require('fs');
 
 const launcherSettings = {
-    headless:          false,
+    headless:          true,
     ignoreHTTPSErrors: true,
     defaultViewport:   null,
     args:              ["--no-sandbox", "--disable-setuid-sandbox"]
