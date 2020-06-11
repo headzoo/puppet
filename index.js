@@ -6,9 +6,10 @@ const tmp        = require('tmp');
 const fs         = require('fs');
 
 const launcherSettings = {
-    headless: true,
+    headless:          false,
     ignoreHTTPSErrors: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"]
+    defaultViewport:   null,
+    args:              ["--no-sandbox", "--disable-setuid-sandbox"]
 };
 
 const app = express();
@@ -21,7 +22,7 @@ router.post('/screenshot', function(req, res) {
         puppeteer
             .launch(launcherSettings)
             .then(async browser => {
-                const { body } = req;
+                const { body }    = req;
                 const { options } = body;
 
                 console.log('Generating screenshot', options);
@@ -29,7 +30,7 @@ router.post('/screenshot', function(req, res) {
                 const page = await browser.newPage();
                 if (body.html) {
                     await page.setContent(body.html, {
-                       waitUntil: 'networkidle2',
+                        waitUntil: 'networkidle2',
                     });
                 } else {
                     await page.goto(body.url, {
@@ -91,9 +92,9 @@ router.post('/screenshot', function(req, res) {
                         });
                     } else {
                         const opts = {
-                            path: tmpFile,
-                            type: 'jpeg',
-                            quality: 60,
+                            path:            tmpFile,
+                            type:            'jpeg',
+                            quality:         60,
                             printBackground: true
                         };
                         if (options.fullPage) {
@@ -114,6 +115,130 @@ router.post('/screenshot', function(req, res) {
                         tmpobj.removeCallback();
                     });
                 }
+            })
+            .catch((err) => {
+                res.status(500);
+                res.send(err.message);
+            })
+    })();
+});
+
+router.post('/scrape', function(req, res) {
+    (async () => {
+        puppeteer
+            .launch(launcherSettings)
+            .then(async browser => {
+                console.log('Scraping page');
+
+                const { body }    = req;
+                const { options } = body;
+
+                const page = await browser.newPage();
+                if (req.body.html) {
+                    await page.setContent(req.body.html, {
+                        waitUntil: 'networkidle2',
+                    });
+                } else {
+                    await page.goto(req.body.url, {
+                        waitUntil: 'networkidle2',
+                    });
+                }
+
+                await page.setDefaultNavigationTimeout(0);
+                if (!options.fullPage) {
+                    await page.setViewport({
+                        width:  parseInt(options.width || 1500, 10),
+                        height: parseInt(options.height || 1500, 10)
+                    });
+                }
+
+                await page.addScriptTag({
+                    url: 'https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js'
+                });
+
+                const sections = await page.evaluate(() => {
+                    const sections  = [];
+                    const variables = [];
+
+                    $('body').find('.block-section').each((i, item) => {
+                        const el = $(item);
+
+                        const html = el.prop('outerHTML');
+                        if (variables.indexOf(html) === -1) {
+                            variables.push(html);
+
+                            const components = el.find('.block-component');
+                            if (components.length) {
+                                const styles = [];
+                                components.each((y, c) => {
+                                    const cel   = $(c);
+                                    const style = (cel.data('style') || cel.data('group'));
+                                    if (style) {
+                                        if (styles.includes(style)) {
+                                            cel.hide();
+                                        }
+                                        styles.push(style);
+                                    }
+                                });
+                            }
+
+                            const rect = el[0].getBoundingClientRect();
+                            sections.push({
+                                width:  rect.width,
+                                height: rect.height,
+                                left:   rect.left,
+                                top:    rect.top,
+                                style:  (el.data('style') || el.data('group')),
+                                block:  el.data('block'),
+                                html
+                            });
+                        }
+                    });
+
+                    return sections;
+                });
+
+                const components = await page.evaluate(() => {
+                    const components = [];
+                    const variables  = [];
+
+                    $('body').find('.block-component').each((i, item) => {
+                        const el = $(item);
+
+                        const html = el.prop('outerHTML');
+                        if (variables.indexOf(html) === -1) {
+                            variables.push(html);
+
+                            const rect = el[0].getBoundingClientRect();
+                            components.push({
+                                width:  rect.width,
+                                height: rect.height,
+                                left:   rect.left,
+                                top:    rect.top,
+                                style:  (el.data('style') || el.data('group')),
+                                block:  el.data('block'),
+                                html
+                            });
+                        }
+                    });
+
+                    return components;
+                });
+
+                const opts = {
+                    path:            options.file,
+                    type:            'jpeg',
+                    quality:         60,
+                    fullPage:        true,
+                    printBackground: true
+                };
+                await page.screenshot(opts);
+                // await browser.close();
+
+                await res.json({
+                    components,
+                    sections
+                });
             })
             .catch((err) => {
                 res.status(500);
@@ -145,8 +270,8 @@ router.post('/pdf', function(req, res) {
                 });
 
                 await page.pdf({
-                    path:   tmpFile,
-                    format: req.body.options.format || 'Letter',
+                    path:            tmpFile,
+                    format:          req.body.options.format || 'Letter',
                     printBackground: true
                 });
                 await browser.close();
@@ -202,7 +327,7 @@ router.post('/ping', function(req, res) {
                 console.log('Pinging');
 
                 const start = (new Date().getTime()) / 1000;
-                const page = await browser.newPage();
+                const page  = await browser.newPage();
                 if (req.body.html) {
                     await page.setContent(req.body.html, {
                         waitUntil: 'networkidle0',
@@ -232,8 +357,8 @@ router.post('/heatmap', function(req, res) {
             .launch(launcherSettings)
             .then(async browser => {
                 console.log('Generating heatmap');
-                const { body } = req;
-                const { points } = body;
+                const { body }    = req;
+                const { points }  = body;
                 const { options } = body;
 
                 console.log(points);
@@ -260,7 +385,7 @@ router.post('/heatmap', function(req, res) {
                 const tmpFile = tmpobj.name + '/screenshot.png';
 
                 const opts = {
-                    path: tmpFile,
+                    path:            tmpFile,
                     printBackground: true
                 };
                 if (options.fullPage) {
