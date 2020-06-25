@@ -225,19 +225,36 @@ router.post('/scrape', function(req, res) {
                     return components;
                 });
 
+                let tmpFile = '';
+                let tmpDir  = '';
+                if (!options.file) {
+                    const tmpObj = tmp.dirSync();
+                    tmpDir       = tmpObj.name;
+                    tmpFile      = tmpDir + '/screenshot.jpg';
+                } else {
+                    tmpFile = options.file;
+                }
+
                 const opts = {
-                    path:            options.file,
+                    path:            tmpFile,
                     type:            'jpeg',
                     quality:         60,
                     fullPage:        true,
                     printBackground: true
                 };
                 await page.screenshot(opts);
-                // await browser.close();
+                await browser.close();
+
+                const screenshot = fs.readFileSync(tmpFile, { encoding: 'base64', flag: 'r' });
+                if (!options.file && tmpFile && tmpDir) {
+                    fs.unlinkSync(tmpFile);
+                    fs.rmdirSync(tmpDir);
+                }
 
                 await res.json({
                     components,
-                    sections
+                    sections,
+                    screenshot
                 });
             })
             .catch((err) => {
