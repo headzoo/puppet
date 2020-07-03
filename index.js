@@ -134,6 +134,8 @@ router.post('/scrape', function(req, res) {
                 const { options } = body;
 
                 const page = await browser.newPage();
+                page.on('console', consoleObj => console.log(consoleObj.text()));
+
                 if (req.body.html) {
                     await page.setContent(req.body.html, {
                         waitUntil: 'networkidle2',
@@ -154,6 +156,18 @@ router.post('/scrape', function(req, res) {
 
                 await page.addScriptTag({
                     url: 'https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js'
+                });
+
+                await page.evaluate(() => {
+                    const foundGroups = [];
+                    document.querySelectorAll('*[data-group]').forEach((el) => {
+                        const groupName = el.getAttribute('data-group');
+                        if (foundGroups.indexOf(groupName) !== -1) {
+                            el.parentNode.removeChild(el);
+                        } else {
+                            foundGroups.push(groupName);
+                        }
+                    })
                 });
 
                 const sections = await page.evaluate(() => {
