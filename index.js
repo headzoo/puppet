@@ -159,6 +159,18 @@ router.post('/scrape', function(req, res) {
                 });
 
                 await page.evaluate(() => {
+                    document
+                        .querySelectorAll('*')
+                        .forEach((element) => {
+                            const style = element.getAttribute('style') || '';
+                            if (style.indexOf('-block-section') !== -1) {
+                                element.classList.add('block-section');
+                            }
+                            if (style.indexOf('-block-component') !== -1) {
+                                element.classList.add('block-component');
+                            }
+                        });
+
                     const foundGroups = [];
                     document.querySelectorAll('*[data-group]').forEach((el) => {
                         const groupName = el.getAttribute('data-group');
@@ -167,12 +179,13 @@ router.post('/scrape', function(req, res) {
                         } else {
                             foundGroups.push(groupName);
                         }
-                    })
+                    });
                 });
 
                 const sections = await page.evaluate(() => {
                     const sections  = [];
                     const variables = [];
+
 
                     $('body').find('.block-section').each((i, item) => {
                         const el = $(item);
