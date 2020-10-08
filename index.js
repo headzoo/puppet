@@ -6,7 +6,7 @@ const tmp        = require('tmp');
 const fs         = require('fs');
 
 const launcherSettings = {
-    headless:          true,
+    headless:          false,
     ignoreHTTPSErrors: true,
     defaultViewport:   null,
     args:              ["--no-sandbox", "--disable-setuid-sandbox"]
@@ -175,7 +175,7 @@ router.post('/scrape', function(req, res) {
                     }
                     document.querySelectorAll('.be-code-edit')
                         .forEach((element) => {
-                            element.innerText = element.innerText.trim();
+                            element.innerHTML = element.innerText.trim();
                         });
 
                     document
@@ -289,7 +289,7 @@ router.post('/scrape', function(req, res) {
                     printBackground: true
                 };
                 await page.screenshot(opts);
-                await browser.close();
+                // await browser.close();
 
                 const screenshot = fs.readFileSync(tmpFile, { encoding: 'base64', flag: 'r' });
                 if (!options.file && tmpFile && tmpDir) {
