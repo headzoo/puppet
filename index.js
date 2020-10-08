@@ -159,6 +159,25 @@ router.post('/scrape', function(req, res) {
                 });
 
                 await page.evaluate(() => {
+                    const style = document.createElement('style');
+                    style.innerText = `
+                        .be-code-edit {
+                            font-family: monospace;
+                            font-size: 34px;
+                            width: 100%;
+                            white-space: pre;
+                            height: auto;
+                        }
+                    `;
+                    const head = document.querySelector('head');
+                    if (head) {
+                        head.appendChild(style);
+                    }
+                    document.querySelectorAll('.be-code-edit')
+                        .forEach((element) => {
+                            element.innerText = element.innerText.trim();
+                        });
+
                     document
                         .querySelectorAll('*')
                         .forEach((element) => {
