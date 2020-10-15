@@ -1,9 +1,10 @@
 #!/usr/bin/env node
-const puppeteer  = require('puppeteer');
-const express    = require('express');
-const bodyParser = require('body-parser');
-const tmp        = require('tmp');
-const fs         = require('fs');
+const puppeteer   = require('puppeteer');
+const express     = require('express');
+const bodyParser  = require('body-parser');
+const imagesToPdf = require('images-to-pdf');
+const tmp         = require('tmp');
+const fs          = require('fs');
 
 const launcherSettings = {
     headless:          true,
@@ -16,6 +17,37 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
+/**
+ *
+ * @param {Puppeteer.Browser} browser
+ * @param {*} options
+ * @param {string} html
+ * @param {string} url
+ * @returns {Promise<Puppeteer.Page>}
+ */
+async function getBrowserPage(browser, options, html, url) {
+    const page = await browser.newPage();
+    if (html) {
+        await page.setContent(html, {
+            waitUntil: 'networkidle2',
+        });
+    } else {
+        await page.goto(url, {
+            waitUntil: 'networkidle2',
+        });
+    }
+
+    await page.setDefaultNavigationTimeout(0);
+    if (!options.fullPage) {
+        await page.setViewport({
+            width:  options.width || 1500,
+            height: options.height || 1500
+        });
+    }
+
+    return page;
+}
+
 const router = express.Router();
 router.post('/screenshot', function(req, res) {
     (async () => {
@@ -24,27 +56,9 @@ router.post('/screenshot', function(req, res) {
             .then(async browser => {
                 const { body }    = req;
                 const { options } = body;
+                const page = getBrowserPage(browser, options, body.html, body.url);
 
                 console.log('Generating screenshot', options);
-
-                const page = await browser.newPage();
-                if (body.html) {
-                    await page.setContent(body.html, {
-                        waitUntil: 'networkidle2',
-                    });
-                } else {
-                    await page.goto(body.url, {
-                        waitUntil: 'networkidle2',
-                    });
-                }
-
-                await page.setDefaultNavigationTimeout(0);
-                if (!options.fullPage) {
-                    await page.setViewport({
-                        width:  options.width || 1500,
-                        height: options.height || 1500
-                    });
-                }
 
                 if (options.selectors) {
                     const images   = {};
@@ -120,6 +134,73 @@ router.post('/screenshot', function(req, res) {
                 res.status(500);
                 res.send(err.message);
             })
+    })();
+});
+
+router.post('/screenshot/pdf', function(req, res) {
+    (async () => {
+        puppeteer
+            .launch(launcherSettings)
+            .then(async browser => {
+                const { body }    = req;
+                const { options } = body;
+
+                /**
+                 * @param {Puppeteer.Page} page
+                 * @param {number} width
+                 * @param {number} height
+                 * @returns {Promise<DirSyncObject>}
+                 */
+                const genScreenshot = async (page, width, height) => {
+                    const tmpObjImage = tmp.dirSync();
+                    const opts        = {
+                        path:            tmpObjImage.name + '/screenshot.jpg',
+                        type:            'jpeg',
+                        quality:         100,
+                        printBackground: true
+                    };
+                    if (options.fullPage) {
+                        opts.fullPage = true;
+                    } else {
+                        opts.clip = {
+                            x:      0,
+                            y:      0,
+                            width:  width || 1500,
+                            height: height || 1500
+                        }
+                    }
+
+                    await page.screenshot(opts);
+
+                    return tmpObjImage;
+                };
+
+                const page          = await getBrowserPage(browser, options, body.html, body.url);
+                const tmpObjDesktop = await genScreenshot(page, options.width, options.height);
+
+                await page.setViewport({
+                    width:  480,
+                    height: options.height || 1500
+                });
+                const tmpObjMobile  = await genScreenshot(page, 480, options.height);
+                const tmpObjPdf     = tmp.dirSync();
+                const tmpFilePdf    = tmpObjPdf.name + '/screenshot.pdf';
+                await imagesToPdf(
+                    [tmpObjDesktop.name + '/screenshot.jpg', tmpObjMobile.name + '/screenshot.jpg'],
+                    tmpFilePdf
+                );
+                await browser.close();
+
+                res.sendFile(tmpFilePdf, {}, () => {
+                    tmpObjDesktop.removeCallback();
+                    tmpObjMobile.removeCallback();
+                    tmpObjPdf.removeCallback();
+                })
+            })
+            .catch((err) => {
+                res.status(500);
+                res.send('Error: ' + err.message);
+            });
     })();
 });
 
@@ -327,10 +408,10 @@ router.post('/pdf', function(req, res) {
                     await page.goto(req.body.url);
                 }
 
-                await page.setViewport({
+                /*await page.setViewport({
                     width:  req.body.options.width || 1500,
                     height: req.body.options.height || 1000
-                });
+                });*/
 
                 await page.pdf({
                     path:            tmpFile,
