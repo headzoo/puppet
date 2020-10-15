@@ -179,10 +179,10 @@ router.post('/screenshot/pdf', function(req, res) {
                 const tmpObjDesktop = await genScreenshot(page, options.width, options.height);
 
                 await page.setViewport({
-                    width:  480,
+                    width:  420,
                     height: options.height || 1500
                 });
-                const tmpObjMobile  = await genScreenshot(page, 480, options.height);
+                const tmpObjMobile  = await genScreenshot(page, 420, options.height);
                 const tmpObjPdf     = tmp.dirSync();
                 const tmpFilePdf    = tmpObjPdf.name + '/screenshot.pdf';
                 await imagesToPdf(
