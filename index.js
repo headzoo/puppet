@@ -56,7 +56,7 @@ router.post('/screenshot', function(req, res) {
             .then(async browser => {
                 const { body }    = req;
                 const { options } = body;
-                const page = getBrowserPage(browser, options, body.html, body.url);
+                const page = await getBrowserPage(browser, options, body.html, body.url);
 
                 console.log('Generating screenshot', options);
 
