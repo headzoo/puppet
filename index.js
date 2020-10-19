@@ -246,7 +246,6 @@ router.post('/scrape', function(req, res) {
                             font-family: monospace;
                             font-size: 34px;
                             width: 100%;
-                            white-space: pre;
                             height: auto;
                         }
                     `;
@@ -256,7 +255,7 @@ router.post('/scrape', function(req, res) {
                     }
                     document.querySelectorAll('.be-code-edit')
                         .forEach((element) => {
-                            element.innerHTML = element.innerText.trim();
+                            element.innerHTML = element.innerText.trim().slice(0, 100);
                         });
 
                     document
