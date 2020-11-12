@@ -274,7 +274,9 @@ router.post('/scrape', function(req, res) {
                     document.querySelectorAll('*[data-group]').forEach((el) => {
                         const groupName = el.getAttribute('data-group');
                         if (foundGroups.indexOf(groupName) !== -1) {
-                            el.parentNode.removeChild(el);
+                            if (!el.getAttribute('data-be-keep')) {
+                                el.parentNode.removeChild(el);
+                            }
                         } else {
                             foundGroups.push(groupName);
                         }
@@ -284,7 +286,6 @@ router.post('/scrape', function(req, res) {
                 const sections = await page.evaluate(() => {
                     const sections  = [];
                     const variables = [];
-
 
                     $('body').find('.block-section').each((i, item) => {
                         const el = $(item);
