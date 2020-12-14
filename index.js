@@ -239,16 +239,33 @@ router.post('/scrape', function(req, res) {
                     url: 'https://ajax.googleapis.com/ajax/libs/jquery/1.8.2/jquery.min.js'
                 });
 
-                await page.evaluate(() => {
+                await page.evaluate((width) => {
                     const style = document.createElement('style');
-                    style.innerText = `
-                        .be-code-edit {
-                            font-family: monospace;
-                            font-size: 34px;
-                            width: 100%;
-                            height: auto;
-                        }
-                    `;
+                    console.log(width);
+                    if (width >= 800) {
+                        style.innerText = `
+                            .be-code-edit {
+                                font-family: monospace;
+                                font-size: 34px;
+                                width: 100%;
+                                height: auto;
+                                overflow-wrap: break-word;
+                            }
+                        `;
+                    } else {
+                        style.innerText = `
+                            .be-code-edit {
+                                font-family: monospace;
+                                font-size: 14px;
+                                width: 100%;
+                                height: auto;
+                                max-height: 100px;
+                                overflow: hidden;
+                                overflow-wrap: break-word;
+                            }
+                        `;
+                    }
+
                     const head = document.querySelector('head');
                     if (head) {
                         head.appendChild(style);
@@ -281,7 +298,7 @@ router.post('/scrape', function(req, res) {
                             foundGroups.push(groupName);
                         }
                     });
-                });
+                }, parseInt(options.width || 1500, 10));
 
                 const sections = await page.evaluate(() => {
                     const sections  = [];
@@ -370,7 +387,7 @@ router.post('/scrape', function(req, res) {
                     printBackground: true
                 };
                 await page.screenshot(opts);
-                await browser.close();
+                // await browser.close();
 
                 const screenshot = fs.readFileSync(tmpFile, { encoding: 'base64', flag: 'r' });
                 if (!options.file && tmpFile && tmpDir) {
