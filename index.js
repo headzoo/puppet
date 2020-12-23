@@ -387,7 +387,7 @@ router.post('/scrape', function(req, res) {
                     printBackground: true
                 };
                 await page.screenshot(opts);
-                // await browser.close();
+                await browser.close();
 
                 const screenshot = fs.readFileSync(tmpFile, { encoding: 'base64', flag: 'r' });
                 if (!options.file && tmpFile && tmpDir) {
