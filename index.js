@@ -17,6 +17,16 @@ const app = express();
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.use(bodyParser.json({ limit: '50mb' }));
 
+async function windowSet(page, name, value) {
+    return page.evaluateOnNewDocument(`
+    Object.defineProperty(window, '${name}', {
+      get() {
+        return '${value}'
+      }
+    })
+  `)
+}
+
 /**
  *
  * @param {Puppeteer.Browser} browser
@@ -27,6 +37,7 @@ app.use(bodyParser.json({ limit: '50mb' }));
  */
 async function getBrowserPage(browser, options, html, url) {
     const page = await browser.newPage();
+    await windowSet(page, '__isScreenshot', 'true');
     if (html) {
         await page.setContent(html, {
             waitUntil: 'networkidle2',
